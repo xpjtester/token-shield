@@ -1,0 +1,7 @@
+{
+  "name": "token-shield",
+  "version": "0.2.0",
+  "description": "Token Shield Plugin reduces context bloat deterministically without requiring an OpenAI API key.",
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json"
+}
