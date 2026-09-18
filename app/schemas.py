@@ -22,3 +22,12 @@ class ChatRequest(BaseModel):
     user: str | None = None
     token_shield: dict[str, Any] = Field(default_factory=dict)
 
+
+class ContextOptimizeRequest(BaseModel):
+    context: str = Field(min_length=1)
+    mode: Literal["safe", "balanced"] = "balanced"
+
+
+class TokenStatsRequest(BaseModel):
+    text: str
+    optimized_text: str | None = None

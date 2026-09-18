@@ -1,0 +1,23 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "token-shield",
+  "version": "0.2.0",
+  "description": "Reduce context bloat deterministically without requiring an OpenAI API key.",
+  "author": {
+    "name": "Qi IT Consulting"
+  },
+  "repository": "https://github.com/xpjtester/token-shield",
+  "license": "MIT",
+  "keywords": ["tokens", "context", "optimization", "mcp", "chatgpt", "codex"],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Token Shield Plugin",
+        "shortDescription": "Shrink repetitive context before AI uses it.",
+        "longDescription": "Deterministically removes duplicate context and repetitive logs while preserving fenced code. No OpenAI API key is required for core optimization.",
+        "defaultPrompt": "Optimize this context with Token Shield Plugin and show the token reduction.",
+        "brandColor": "#42F5AD"
+      }
+    }
+  }
+}
