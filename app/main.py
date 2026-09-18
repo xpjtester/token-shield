@@ -6,18 +6,21 @@ from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 
 from app.config import settings
+from app.context_optimizer import optimize_context, token_stats
+from app.mcp_server import mcp, transport_security_settings
 from app.optimizer import optimize
-from app.schemas import ChatRequest
+from app.schemas import ChatRequest, ContextOptimizeRequest, TokenStatsRequest
 from app.storage import cache_get, cache_key, cache_put, init_db, log_request, stats
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     init_db()
-    yield
+    async with mcp.session_manager.run():
+        yield
 
 
-app = FastAPI(title="Token Shield", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="Token Shield Plugin", version="0.2.0", lifespan=lifespan)
 
 
 @app.get("/")
@@ -27,12 +30,30 @@ async def dashboard():
 
 @app.get("/health")
 async def health():
-    return {"status": "ok"}
+    return {
+        "status": "ok",
+        "version": "0.2.0",
+        "zero_key_optimizer": True,
+        "mcp": "/mcp",
+        "proxy_api_key_configured": bool(settings.openai_api_key),
+    }
 
 
 @app.get("/api/stats")
 async def get_stats():
     return stats()
+
+
+@app.post("/api/optimize")
+async def optimize_api(request: ContextOptimizeRequest):
+    result = optimize_context(request.context, request.mode)
+    log_request("local-core", result.before_tokens, result.after_tokens, 0, False, result.actions)
+    return result.to_dict()
+
+
+@app.post("/api/token-stats")
+async def token_stats_api(request: TokenStatsRequest):
+    return token_stats(request.text, request.optimized_text)
 
 
 @app.post("/v1/chat/completions")
@@ -53,7 +74,10 @@ async def chat(request: ChatRequest, authorization: str | None = Header(default=
 
     api_key = (authorization or "").removeprefix("Bearer ").strip() or settings.openai_api_key
     if not api_key:
-        raise HTTPException(401, "Missing API key. Send Authorization: Bearer ... or set OPENAI_API_KEY.")
+        raise HTTPException(
+            401,
+            "The optional LLM proxy needs an API key. Token Shield optimizer/MCP works without one.",
+        )
 
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
     url = f"{settings.upstream_base_url.rstrip('/')}/v1/chat/completions"
@@ -73,6 +97,7 @@ async def chat(request: ChatRequest, authorization: str | None = Header(default=
             finally:
                 await upstream.aclose()
                 await client.aclose()
+
         return StreamingResponse(relay(), media_type="text/event-stream")
 
     try:
@@ -88,9 +113,25 @@ async def chat(request: ChatRequest, authorization: str | None = Header(default=
 
     output_tokens = body.get("usage", {}).get("completion_tokens", 0)
     saved = max(0, result.before_tokens - result.after_tokens)
-    body["token_shield"] = {"cache_hit": False, "before_tokens": result.before_tokens, "after_tokens": result.after_tokens, "saved_input_tokens": saved, "actions": result.actions}
+    body["token_shield"] = {
+        "cache_hit": False,
+        "before_tokens": result.before_tokens,
+        "after_tokens": result.after_tokens,
+        "saved_input_tokens": saved,
+        "actions": result.actions,
+    }
     log_request(result.model, result.before_tokens, result.after_tokens, output_tokens, False, result.actions)
     if use_cache:
         cache_put(key, body)
     return JSONResponse(body)
 
+
+# Mount last so normal FastAPI routes win before the MCP ASGI app handles /mcp.
+app.mount(
+    "/",
+    mcp.streamable_http_app(
+        json_response=True,
+        stateless_http=True,
+        transport_security=transport_security_settings(),
+    ),
+)
