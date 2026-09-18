@@ -2,7 +2,9 @@ services:
   token-shield:
     build: .
     ports: ["8000:8000"]
-    env_file: .env
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      MCP_ALLOWED_HOSTS: ${MCP_ALLOWED_HOSTS:-}
+      MCP_ALLOWED_ORIGINS: ${MCP_ALLOWED_ORIGINS:-}
     volumes: ["./data:/app/data"]
     restart: unless-stopped
-
