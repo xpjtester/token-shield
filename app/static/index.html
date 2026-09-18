@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Token Shield</title>
+<style>
+:root{color-scheme:dark;--bg:#07110e;--card:#0e1e19;--line:#21453a;--green:#42f5ad;--muted:#93afa5}*{box-sizing:border-box}body{margin:0;font:15px system-ui;background:radial-gradient(circle at 80% 0,#123c2e,transparent 36%),var(--bg);color:#ecfff8}.wrap{max-width:1050px;margin:auto;padding:48px 22px}header{display:flex;justify-content:space-between;align-items:center}.logo{font-weight:800;font-size:22px}.dot{color:var(--green)}.status{color:var(--green);font-size:13px}h1{font-size:46px;max-width:720px;margin:70px 0 10px;letter-spacing:-2px}p{color:var(--muted)}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:42px 0}.card{padding:22px;background:linear-gradient(145deg,#10251e,#0b1814);border:1px solid var(--line);border-radius:15px}.label{color:var(--muted);font-size:12px;text-transform:uppercase}.value{font-size:30px;font-weight:750;margin-top:10px}.green{color:var(--green)}pre{background:#050b09;border:1px solid var(--line);padding:20px;border-radius:15px;overflow:auto;color:#c8ffea}.bar{height:9px;background:#1b342c;border-radius:9px;margin-top:14px}.fill{height:100%;background:var(--green);border-radius:9px;width:0;transition:.6s}@media(max-width:700px){.grid{grid-template-columns:1fr 1fr}h1{font-size:36px}}
+</style></head><body><div class="wrap"><header><div class="logo">TOKEN<span class="dot">SHIELD</span></div><div class="status">● Proxy online</div></header>
+<h1>Spend tokens on answers.<br>Not repeated context.</h1><p>Live savings from context trimming, routing, output budgets and cache hits.</p>
+<section class="grid"><div class="card"><div class="label">Requests</div><div class="value" id="requests">0</div></div><div class="card"><div class="label">Tokens saved</div><div class="value green" id="saved">0</div></div><div class="card"><div class="label">Saving rate</div><div class="value" id="rate">0%</div><div class="bar"><div class="fill" id="fill"></div></div></div><div class="card"><div class="label">Cache hits</div><div class="value" id="hits">0</div></div></section>
+<h2>Drop-in usage</h2><pre>from openai import OpenAI
+
+client = OpenAI(
+    base_url="http://localhost:8000/v1",
+    api_key="your-openai-key"
+)</pre></div><script>async function load(){let s=await fetch('/api/stats').then(r=>r.json());requests.textContent=s.requests;saved.textContent=s.saved_tokens.toLocaleString();rate.textContent=s.saving_percent+'%';hits.textContent=s.cache_hits;fill.style.width=Math.min(s.saving_percent,100)+'%'}load();setInterval(load,5000)</script></body></html>
+
